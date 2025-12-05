@@ -1,7 +1,4 @@
-
-  # Create Landing Page
-
-  This is a code bundle for Create Landing Page. The original project is available at https://www.figma.com/design/8GQTySwqcE61XRaWfXpuPx/Create-Landing-Page.
+Design done in Figma 
 
   ## Running the code
 
