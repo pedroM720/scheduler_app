@@ -22,13 +22,13 @@ app = FastAPI()
 
 # model for requesting data validation 
 class GroupCreate(BaseModel):
-        group_name: str
-        password: str
+    group_name: str
+    password: str
 
 class GroupJoin(BaseModel):
-     group_name: str
-     password: str
-     username: str
+    group_name: str
+    password: str
+    username: str
 
 # password management logic
 def hash_password(password: str) -> str:
@@ -106,7 +106,7 @@ def join_group(join_data: GroupJoin):
         
     return {"message": f"User '{join_data.username}' added to group '{join_data.group_name}'"}
 
-# ✨ NEW: Endpoint to get the current count for a group
+#Endpoint to get the current count for a group
 @app.get("/counter/{group_id}")
 def get_counter(group_id: str):
     """
@@ -119,7 +119,7 @@ def get_counter(group_id: str):
         
     return {"group_id": group_id, "count": counter_res.data[0]["count"]}
 
-# ✨ NEW: Endpoint to increment the count
+# Endpoint to increment the count
 @app.post("/counter/increment/{group_id}")
 def increment_counter(group_id: str):
     """
@@ -141,3 +141,9 @@ def increment_counter(group_id: str):
         raise HTTPException(status_code=500, detail="Failed to update counter")
         
     return {"message": "Counter incremented", "new_count": new_count}
+
+
+"""
+FASTAPI  backend designed for user management, groups, share count, and database endpoints
+implements models for data validations an API endpoints
+"""
