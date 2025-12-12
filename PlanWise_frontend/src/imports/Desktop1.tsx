@@ -82,7 +82,7 @@ function Frame1({ onClick }: { onClick: () => void }) {
   return (
     <button 
       onClick={onClick}
-      className="absolute bg-[rgba(11,11,11,0)] box-border content-stretch flex flex-col gap-[6px] items-center justify-center left-[1380px] overflow-clip p-[8px] w-[52px] h-[52px] top-[15px] cursor-pointer transition-all duration-200 hover:opacity-80 active:opacity-60"
+      className="absolute bg-[rgba(11,11,11,0)] flex flex-col gap-[6px] items-center justify-center right-[20px] top-[15px] p-[8px] w-[52px] h-[52px] cursor-pointer transition-all duration-200 hover:opacity-80 active:opacity-60"
     >
       <div className="bg-white h-[2.5px] shrink-0 w-[36px]" />
       <div className="bg-white h-[2.5px] shrink-0 w-[36px]" />
