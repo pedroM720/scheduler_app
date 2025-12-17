@@ -1,3 +1,14 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+
+# Env files
+.env
+
+# Node / frontend
+node_modules/
+.next/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

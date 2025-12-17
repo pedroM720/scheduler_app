@@ -4,6 +4,9 @@ import bcrypt
 import os
 from dotenv import load_dotenv
 from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
+from datetime import datetime
+from typing import List
 
 # loads env vars
 load_dotenv()
@@ -20,6 +23,24 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 app = FastAPI()
 
+origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:5174",  # Vite fallback port
+    "http://127.0.0.1:5174",  # Vite fallback port
+    "http://localhost:3000",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+
 # model for requesting data validation 
 class GroupCreate(BaseModel):
     group_name: str
@@ -29,6 +50,16 @@ class GroupJoin(BaseModel):
     group_name: str
     password: str
     username: str
+
+class TimeSlot(BaseModel):
+    start_time: datetime
+    end_time: datetime
+
+class AvailabilityCreate(BaseModel):
+    user_name: str
+    group_name: str
+    password: str
+    slots: List[TimeSlot]
 
 # password management logic
 def hash_password(password: str) -> str:
@@ -122,26 +153,123 @@ def get_counter(group_id: str):
 # Endpoint to increment the count
 @app.post("/counter/increment/{group_id}")
 def increment_counter(group_id: str):
-    """
-    Increments the counter for a given group by 1.
-    """
-    # First, get the current count
-    get_res = supabase.table("counters").select("count").eq("group_id", group_id).execute()
+    response = supabase.rpc("increment_counter", {"row_id": group_id}).execute()
     
-    if not get_res.data:
-        raise HTTPException(status_code=404, detail="Counter for this group not found")
-        
-    current_count = get_res.data[0]["count"]
-    new_count = current_count + 1
-    
-    # Now, update the count
-    update_res = supabase.table("counters").update({"count": new_count}).eq("group_id", group_id).execute()
-    
-    if not update_res.data:
-        raise HTTPException(status_code=500, detail="Failed to update counter")
-        
-    return {"message": "Counter incremented", "new_count": new_count}
+    # Optional: fetch new count to return to user
+    # (or just return success message to save bandwidth)
+    return {"message": "Counter incremented safely"}
 
+
+# --- 1. Helper: Find Intersection of Two Lists of Slots ---
+def get_intersection(slots_a, slots_b):
+    # Takes two lists of time slots and returns the times that exist in BOTH.
+
+    intersections = []
+    i, j = 0, 0
+    
+    # Sort slots
+    slots_a.sort(key=lambda x: x['start_time'])
+    slots_b.sort(key=lambda x: x['start_time'])
+
+    while i < len(slots_a) and j < len(slots_b):
+        # Determine the start and end of the potential overlap
+        start = max(slots_a[i]['start_time'], slots_b[j]['start_time'])
+        end = min(slots_a[i]['end_time'], slots_b[j]['end_time'])
+
+        if start < end:
+            intersections.append({'start_time': start, 'end_time': end})
+
+        # Move the pointer of the slot that ends first
+        if slots_a[i]['end_time'] < slots_b[j]['end_time']:
+            i += 1
+        else:
+            j += 1
+            
+    return intersections
+
+@app.post("/availability")
+def add_availability(data: AvailabilityCreate):
+    # A. Auth Check
+    group_res = supabase.table("groups").select("id, password").eq("name", data.group_name).execute()
+    if not group_res.data or not verify_password(data.password, group_res.data[0]["password"]):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    group_id = group_res.data[0]["id"]
+    
+    # B. Find User ID
+    user_res = supabase.table("users").select("id").eq("name", data.user_name).eq("group_id", group_id).execute()
+    if not user_res.data:
+        raise HTTPException(status_code=404, detail="User not found in this group")
+    
+    user_id = user_res.data[0]["id"]
+
+    # C. Prepare Data for Bulk Insert
+    records = [
+        {
+            "user_id": user_id,
+            "start_time": slot.start_time.isoformat(),
+            "end_time": slot.end_time.isoformat()
+        }
+        for slot in data.slots
+    ]
+
+    # D. Insert
+    insert_res = supabase.table("availability").insert(records).execute()
+    return {"message": f"Added {len(records)} slots for {data.user_name}"}
+
+# --- 3. Endpoint: Get Group Overlap ---
+@app.get("/groups/{group_name}/overlap")
+def get_group_overlap(group_name: str):
+    # A. Get Group ID
+    group_res = supabase.table("groups").select("id").eq("name", group_name).execute()
+    if not group_res.data:
+        raise HTTPException(status_code=404, detail="Group not found")
+    group_id = group_res.data[0]['id']
+
+    # B. Get all users in the group
+    users_res = supabase.table("users").select("id").eq("group_id", group_id).execute()
+    if not users_res.data:
+        return {"overlap": []} # No users, no overlap
+    
+    # C. Get availability for all users
+    # We fetch ALL slots for this group in one query for efficiency
+    user_ids = [u['id'] for u in users_res.data]
+    slots_res = supabase.table("availability").select("*").in_("user_id", user_ids).execute()
+    all_slots = slots_res.data
+
+    # D. Group slots by User ID
+    # user_slots = { "user_uuid": [ {start, end}, {start, end} ] }
+    user_slots_map = {}
+    for slot in all_slots:
+        # Convert string ISO dates back to datetime objects for comparison
+        slot['start_time'] = datetime.fromisoformat(slot['start_time'])
+        slot['end_time'] = datetime.fromisoformat(slot['end_time'])
+        
+        uid = slot['user_id']
+        if uid not in user_slots_map:
+            user_slots_map[uid] = []
+        user_slots_map[uid].append(slot)
+
+    # E. Calculate Intersection of ALL users
+    # Start with the first user's slots as the baseline "common time"
+    if not user_slots_map:
+        return {"overlap": []}
+    
+    first_user_id = list(user_slots_map.keys())[0]
+    common_slots = user_slots_map[first_user_id]
+
+    # Compare iteratively with every other user
+    # (Common Intersect User2) -> NewCommon
+    # (NewCommon Intersect User3) -> FinalCommon ...
+    for uid in user_slots_map:
+        if uid == first_user_id: continue
+        common_slots = get_intersection(common_slots, user_slots_map[uid])
+        
+        # Optimization: If common slots become empty, we can stop early
+        if not common_slots:
+            break
+
+    return {"overlap": common_slots}
 
 """
 FASTAPI  backend designed for user management, groups, share count, and database endpoints
