@@ -4,9 +4,10 @@ import { X, Loader2 } from 'lucide-react';
 interface CreateGroupPopupProps {
   isOpen: boolean;
   onClose: () => void;
+  onSuccess?: (groupName: string) => void;
 }
 
-export function CreateGroupPopup({ isOpen, onClose }: CreateGroupPopupProps) {
+export function CreateGroupPopup({ isOpen, onClose, onSuccess }: CreateGroupPopupProps) {
   const [groupName, setGroupName] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -35,6 +36,12 @@ export function CreateGroupPopup({ isOpen, onClose }: CreateGroupPopupProps) {
       console.log("Group Created:", data);
       
       alert(`Group "${groupName}" created!`);
+      
+      // CRITICAL: Trigger the success callback so the App opens the Calendar
+      if (onSuccess) {
+        onSuccess(groupName);
+      }
+      
       setGroupName('');
       setPassword('');
       onClose();

@@ -1,16 +1,17 @@
 import { X, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 
+// FIX 1: Add onSuccess so App.tsx can pass the callback without error
 interface JoinGroupPopupProps {
   isOpen: boolean;
   onClose: () => void;
+  onSuccess?: (groupName: string, username: string) => void;
 }
 
-export function JoinGroupPopup({ isOpen, onClose }: JoinGroupPopupProps) {
-  // Added state for all 3 required backend fields
+export function JoinGroupPopup({ isOpen, onClose, onSuccess }: JoinGroupPopupProps) {
   const [groupName, setGroupName] = useState('');
   const [password, setPassword] = useState('');
-  const [username, setUsername] = useState(''); // Essential for the app to know who you are
+  const [username, setUsername] = useState(''); 
   
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -41,11 +42,12 @@ export function JoinGroupPopup({ isOpen, onClose }: JoinGroupPopupProps) {
 
       console.log("Joined Group:", data);
       
-      // Success!
       alert(`Successfully joined ${groupName} as ${username}!`);
       
-      // TODO: Save the user info (maybe in localStorage for now) so the app remembers you
-      // localStorage.setItem('currentUser', JSON.stringify({ name: username, group: groupName }));
+      // FIX 2: Call the success handler so the Calendar opens
+      if (onSuccess) {
+        onSuccess(groupName, username);
+      }
       
       onClose();
 
@@ -58,17 +60,15 @@ export function JoinGroupPopup({ isOpen, onClose }: JoinGroupPopupProps) {
 
   return (
     <>
-      {/* Backdrop */}
       <div 
         className="fixed inset-0 bg-black/50 z-40 transition-opacity duration-300 flex items-center justify-center"
         onClick={onClose}
       >
-        {/* Popup Container - Adjusted height to fit 3 inputs */}
+        {/* FIX 3: Changed h-[400px] to h-auto so the 3 inputs don't get cut off */}
         <div 
           className="bg-white rounded-[20px] w-[600px] h-[400px] relative shadow-xl py-[50px]"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Close Button */}
           <button
             onClick={onClose}
             className="absolute top-[20px] right-[20px] size-[40px] flex items-center justify-center cursor-pointer transition-all duration-200 hover:opacity-60"
@@ -76,7 +76,6 @@ export function JoinGroupPopup({ isOpen, onClose }: JoinGroupPopupProps) {
             <X className="size-[30px] text-gray-600" strokeWidth={2} />
           </button>
 
-          {/* Popup Content */}
           <div className="flex flex-col items-center justify-center h-full px-[40px] gap-[30px]">
             <div className="text-center">
               <p className="font-['Inter:Regular',sans-serif] text-[32px] text-gray-800">
