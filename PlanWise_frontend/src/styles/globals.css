@@ -1,5 +1,8 @@
+@import "tailwindcss";
+
 @custom-variant dark (&:is(.dark *));
 
+/* --- 1. GLOBAL VARIABLES --- */
 :root {
   --font-size: 16px;
   --background: #ffffff;
@@ -61,8 +64,6 @@
   --border: oklch(0.269 0 0);
   --input: oklch(0.269 0 0);
   --ring: oklch(0.439 0 0);
-  --font-weight-medium: 500;
-  --font-weight-normal: 400;
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
@@ -78,6 +79,7 @@
   --sidebar-ring: oklch(0.439 0 0);
 }
 
+/* --- 2. TAILWIND THEME MAPPING --- */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -119,6 +121,7 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/* --- 3. BASE LAYERS --- */
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -129,55 +132,33 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
-}
 
-/**
- * Base typography. This is not applied to elements which have an ancestor with a Tailwind text class.
- */
-@layer base {
+  html {
+    font-size: var(--font-size);
+  }
+
+  /* Teammate's Smart Typography Defaults */
   :where(:not(:has([class*=' text-']), :not(:has([class^='text-'])))) {
     h1 {
       font-size: var(--text-2xl);
       font-weight: var(--font-weight-medium);
       line-height: 1.5;
     }
-
     h2 {
       font-size: var(--text-xl);
       font-weight: var(--font-weight-medium);
       line-height: 1.5;
     }
-
     h3 {
       font-size: var(--text-lg);
       font-weight: var(--font-weight-medium);
       line-height: 1.5;
     }
-
-    h4 {
+    h4, label, button {
       font-size: var(--text-base);
       font-weight: var(--font-weight-medium);
       line-height: 1.5;
     }
-
-    p {
-      font-size: var(--text-base);
-      font-weight: var(--font-weight-normal);
-      line-height: 1.5;
-    }
-
-    label {
-      font-size: var(--text-base);
-      font-weight: var(--font-weight-medium);
-      line-height: 1.5;
-    }
-
-    button {
-      font-size: var(--text-base);
-      font-weight: var(--font-weight-medium);
-      line-height: 1.5;
-    }
-
     input {
       font-size: var(--text-base);
       font-weight: var(--font-weight-normal);
@@ -186,10 +167,7 @@
   }
 }
 
-html {
-  font-size: var(--font-size);
-}
-
+/* --- 4. CUSTOM PLANWISE STYLES --- */
 .animated-gradient {
   background: linear-gradient(135deg, #549EFF 5%, #8570FF 74%, #A06EFF 100%);
   background-size: 200% 200%;
@@ -197,13 +175,7 @@ html {
 }
 
 @keyframes gradientShift {
-  0% {
-    background-position: 0% 0%;
-  }
-  50% {
-    background-position: 100% 100%;
-  }
-  100% {
-    background-position: 0% 0%;
-  }
+  0% { background-position: 0% 0%; }
+  50% { background-position: 100% 100%; }
+  100% { background-position: 0% 0%; }
 }

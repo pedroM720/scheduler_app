@@ -1,11 +1,11 @@
 import { X, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 
-// FIX 1: Add onSuccess so App.tsx can pass the callback without error
+// FIX 1: Update interface to include password (matching App.tsx expectation)
 interface JoinGroupPopupProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: (groupName: string, username: string) => void;
+  onSuccess?: (groupName: string, password: string, username: string) => void;
 }
 
 export function JoinGroupPopup({ isOpen, onClose, onSuccess }: JoinGroupPopupProps) {
@@ -44,9 +44,9 @@ export function JoinGroupPopup({ isOpen, onClose, onSuccess }: JoinGroupPopupPro
       
       alert(`Successfully joined ${groupName} as ${username}!`);
       
-      // FIX 2: Call the success handler so the Calendar opens
+      // FIX 2: Pass password as the second argument
       if (onSuccess) {
-        onSuccess(groupName, username);
+        onSuccess(groupName, password, username);
       }
       
       onClose();
@@ -64,9 +64,8 @@ export function JoinGroupPopup({ isOpen, onClose, onSuccess }: JoinGroupPopupPro
         className="fixed inset-0 bg-black/50 z-40 transition-opacity duration-300 flex items-center justify-center"
         onClick={onClose}
       >
-        {/* FIX 3: Changed h-[400px] to h-auto so the 3 inputs don't get cut off */}
         <div 
-          className="bg-white rounded-[20px] w-[600px] h-[400px] relative shadow-xl py-[50px]"
+          className="bg-white rounded-[20px] w-[600px] h-auto relative shadow-xl py-[50px]"
           onClick={(e) => e.stopPropagation()}
         >
           <button

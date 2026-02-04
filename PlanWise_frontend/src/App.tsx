@@ -1,12 +1,14 @@
 import { useState } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Desktop from './imports/Desktop1';
 import { NavMenu } from './components/NavMenu';
 import { SignInPopup } from './components/SignInPopup';
 import { JoinGroupPopup } from './components/JoinGroupPopup';
 import { CreateGroupPopup } from './components/CreateGroupPopup';
-import { CalendarPopup } from './components/calendarPopup'; // Added Import
+import { CalendarPopup } from './components/calendarPopup';
+import { MeetingDashboard } from './components/MeetingDashboard';
 
-export default function App() {
+function Home() {
   const [isNavOpen, setIsNavOpen] = useState(false);
   const [isSignInOpen, setIsSignInOpen] = useState(false);
   const [isJoinGroupOpen, setIsJoinGroupOpen] = useState(false);
@@ -14,14 +16,14 @@ export default function App() {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   
   // Track who is logged in so we can pass it to the calendar
-  const [currentUser, setCurrentUser] = useState({ name: '', group: '' });
+  const [currentUser, setCurrentUser] = useState({ name: '', group: '', password: '' });
 
   // Central handler for when a user successfully enters a group
-  const handleAuthSuccess = (group: string, name: string) => {
-    setCurrentUser({ group, name });
+  const handleAuthSuccess = (group: string, pass: string, name: string) => {
+    setCurrentUser({ group, password: pass, name });
     setIsCreateGroupOpen(false);
     setIsJoinGroupOpen(false);
-    // Automatically open the calendar
+    // Automatically open the calendar setup
     setIsCalendarOpen(true);
   };
 
@@ -50,15 +52,15 @@ export default function App() {
       <JoinGroupPopup 
         isOpen={isJoinGroupOpen} 
         onClose={() => setIsJoinGroupOpen(false)} 
-        // Pass the success handler
-        onSuccess={(groupName, username) => handleAuthSuccess(groupName, username)}
+        // Receives password from popup
+        onSuccess={(groupName, password, username) => handleAuthSuccess(groupName, password, username)}
       />
       
       <CreateGroupPopup 
         isOpen={isCreateGroupOpen} 
         onClose={() => setIsCreateGroupOpen(false)}
-        // Pass the success handler (default name 'Host' for creators)
-        onSuccess={(groupName) => handleAuthSuccess(groupName, "Host")} 
+        // Receives password from popup (default name 'Host' for creators)
+        onSuccess={(groupName, password) => handleAuthSuccess(groupName, password, "Host")} 
       />
 
       <CalendarPopup 
@@ -66,8 +68,19 @@ export default function App() {
         onClose={() => setIsCalendarOpen(false)}
         groupName={currentUser.group}
         username={currentUser.name}
+        password={currentUser.password} 
       />
-
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/dashboard" element={<MeetingDashboard />} />
+      </Routes>
+    </BrowserRouter>
   );
 }

@@ -4,7 +4,8 @@ import { X, Loader2 } from 'lucide-react';
 interface CreateGroupPopupProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: (groupName: string) => void;
+  // FIX: Interface updated to expect (groupName, password)
+  onSuccess?: (groupName: string, password: string) => void;
 }
 
 export function CreateGroupPopup({ isOpen, onClose, onSuccess }: CreateGroupPopupProps) {
@@ -37,9 +38,9 @@ export function CreateGroupPopup({ isOpen, onClose, onSuccess }: CreateGroupPopu
       
       alert(`Group "${groupName}" created!`);
       
-      // CRITICAL: Trigger the success callback so the App opens the Calendar
+      // FIX: Passing password back to App.tsx
       if (onSuccess) {
-        onSuccess(groupName);
+        onSuccess(groupName, password);
       }
       
       setGroupName('');
@@ -55,18 +56,14 @@ export function CreateGroupPopup({ isOpen, onClose, onSuccess }: CreateGroupPopu
 
   return (
     <>
-      {/* Backdrop */}
       <div 
         className="fixed inset-0 bg-black/50 z-40 transition-opacity duration-300 flex items-center justify-center"
         onClick={onClose}
       >
-        {/* Popup Container */}
-        {/* MODIFIED: Changed py-10 to py-[60px] to add more gap at top and bottom */}
         <div 
           className="bg-white rounded-[20px] w-[600px] h-[400px] relative shadow-xl py-[60px]"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Close Button */}
           <button
             onClick={onClose}
             className="absolute top-[20px] right-[20px] size-[40px] flex items-center justify-center cursor-pointer transition-all duration-200 hover:opacity-60"
@@ -74,14 +71,12 @@ export function CreateGroupPopup({ isOpen, onClose, onSuccess }: CreateGroupPopu
             <X className="size-[30px] text-gray-600" strokeWidth={2} />
           </button>
 
-          {/* Popup Content - Centered Style matching JoinGroup */}
           <div className="flex flex-col items-center justify-center h-full px-[40px] gap-[30px]">
             <p className="font-['Inter:Regular',sans-serif] text-[32px] text-gray-800">
               Create Group
             </p>
             
             <form onSubmit={handleCreate} className="w-full flex flex-col items-center gap-[20px]">
-              
               <input
                 type="text"
                 placeholder="Group Name"
@@ -113,7 +108,6 @@ export function CreateGroupPopup({ isOpen, onClose, onSuccess }: CreateGroupPopu
               >
                 {isLoading ? <Loader2 className="animate-spin" /> : "Create"}
               </button>
-
             </form>
           </div>
         </div>

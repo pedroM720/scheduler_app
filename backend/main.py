@@ -80,34 +80,39 @@ def create_group(group_data: GroupCreate):
     hashed_pw = hash_password(group_data.password)
     
     try:
-        # insert new group
-       group_response = supabase.table("groups").insert({
+        # 1. Insert Group
+        group_response = supabase.table("groups").insert({
             "name": group_data.group_name,
             "password": hashed_pw
         }).execute()
        
-       if not group_response.data:
+        if not group_response.data:
             raise HTTPException(status_code=500, detail="Failed to make group")
        
-       new_group_id = group_response.data[0]["id"]
+        new_group_id = group_response.data[0]["id"]
 
-       #initialize the counter for new group
-       
-       counter_response = supabase.table("counters").insert({
+        # 2. [NEW] Insert Creator as a User named "Host"
+        # This ensures the user exists when they try to save availability immediately after
+        supabase.table("users").insert({
+            "name": "Host",
+            "group_id": new_group_id
+        }).execute()
+
+        # 3. Initialize Counter
+        counter_response = supabase.table("counters").insert({
             "group_id": new_group_id,
             "count": 0
         }).execute()
        
-       if not counter_response.data:
-            # Optional: Add logic to delete the created group for consistency
-            raise HTTPException(status_code=500, detail="Failed to initialize counter for group")
-       return {"message": "Group created successfully", "group_id": new_group_id}
+        if not counter_response.data:
+            raise HTTPException(status_code=500, detail="Failed to initialize counter")
+            
+        return {"message": "Group created successfully", "group_id": new_group_id}
     
     except Exception as e:
         if 'duplicate key value violates unique constraint' in str(e):
             raise HTTPException(status_code=409, detail="A group with this name already exists.")
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}")
-
 
 # new endpoint for joining group
 @app.post("/join-group")

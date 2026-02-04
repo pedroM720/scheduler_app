@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { X, Loader2, Calendar as CalendarIcon, Clock, Trash2 } from 'lucide-react';
+import { Loader2, Calendar as CalendarIcon, Clock } from 'lucide-react';
 import { DayPicker } from 'react-day-picker';
 import { format } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
 import 'react-day-picker/dist/style.css';
 
 interface CalendarPopupProps {
@@ -13,258 +14,192 @@ interface CalendarPopupProps {
 }
 
 export function CalendarPopup({ isOpen, onClose, groupName, username, password }: CalendarPopupProps) {
-  // 1. The dates selected on the calendar
+  const navigate = useNavigate();
+  // State
   const [selectedDates, setSelectedDates] = useState<Date[] | undefined>([]);
-  
-  // 2. The times associated with each date string (Key: "2023-11-27", Value: {start, end})
-  const [timeSlots, setTimeSlots] = useState<Record<string, { start: string, end: string }>>({});
-  
-  // 3. Toggle for bulk editing
-  const [applyToAll, setApplyToAll] = useState(false);
-  const [globalTime, setGlobalTime] = useState({ start: '09:00', end: '17:00' });
-  
+  // Key: "yyyy-MM-dd", Value: { start: "09:00", end: "17:00" }
+  const [timeSlots, setTimeSlots] = useState<Record<string, { start: string; end: string }>>({});
   const [isLoading, setIsLoading] = useState(false);
 
-  // Initialize time slots when dates are selected
+  // Initialize time slots when dates change
   useEffect(() => {
     if (!selectedDates) return;
     
-    const newSlots = { ...timeSlots };
-    let hasChanges = false;
-
-    selectedDates.forEach(date => {
-      const dateKey = format(date, 'yyyy-MM-dd');
-      // If this date doesn't have a time yet, give it a default
-      if (!newSlots[dateKey]) {
-        newSlots[dateKey] = { start: '09:00', end: '17:00' };
-        hasChanges = true;
-      }
+    setTimeSlots(prev => {
+      const next = { ...prev };
+      let changed = false;
+      selectedDates.forEach(date => {
+        const key = format(date, 'yyyy-MM-dd');
+        if (!next[key]) {
+          next[key] = { start: '09:00', end: '17:00' };
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
     });
-
-    if (hasChanges) setTimeSlots(newSlots);
   }, [selectedDates]);
 
   if (!isOpen) return null;
 
-  // --- Handlers ---
-
+  // Handlers
   const handleTimeChange = (date: Date, field: 'start' | 'end', value: string) => {
-    const dateKey = format(date, 'yyyy-MM-dd');
+    const key = format(date, 'yyyy-MM-dd');
     setTimeSlots(prev => ({
       ...prev,
-      [dateKey]: { ...prev[dateKey], [field]: value }
+      [key]: { ...prev[key], [field]: value }
     }));
-  };
-
-  const removeDate = (dateToRemove: Date) => {
-    setSelectedDates(prev => prev?.filter(d => d.getTime() !== dateToRemove.getTime()));
   };
 
   const handleSubmit = async () => {
     if (!selectedDates || selectedDates.length === 0) {
-      alert("Please select at least one date.");
-      return;
+      return alert("Please select at least one date.");
     }
-
     setIsLoading(true);
-
     try {
-      // Transform Frontend State -> Backend JSON
-      const slots = selectedDates.map((date) => {
-        const dateStr = format(date, 'yyyy-MM-dd');
-        
-        // Use Global Time OR Individual Time based on toggle
-        const time = applyToAll ? globalTime : timeSlots[dateStr];
-
+      const slots = selectedDates.map(date => {
+        const key = format(date, 'yyyy-MM-dd');
+        const time = timeSlots[key] || { start: '09:00', end: '17:00' };
         return {
-          start_time: `${dateStr}T${time.start}:00`,
-          end_time: `${dateStr}T${time.end}:00`,
+          start_time: `${key}T${time.start}:00`,
+          end_time: `${key}T${time.end}:00`
         };
       });
 
-      const payload = {
-        user_name: username,
-        group_name: groupName,
-        password: password,
-        slots: slots
-      };
-
-      console.log("Sending Payload:", payload);
-
-      const response = await fetch('http://127.0.0.1:8000/availability', {
+      const res = await fetch('http://127.0.0.1:8000/availability', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          user_name: username,
+          group_name: groupName,
+          password,
+          slots
+        })
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.detail || 'Failed to save availability');
-      }
-
-      alert(`Success! Saved ${slots.length} time slots.`);
+      if (!res.ok) throw new Error('Failed to save');
+      
+      // Close the popup and navigate to the dashboard
       onClose();
-
-    } catch (err: any) {
-      console.error(err);
-      alert(`Error: ${err.message}`);
+      navigate('/dashboard', { state: { groupName, username } });
+      
+    } catch (e: any) {
+      console.error(e);
+      alert("Error: " + e.message);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // CSS to force the Calendar to use your Purple Brand Color
+  // Styles
   const css = `
-    .rdp-day_selected, .rdp-day_selected:focus-visible, .rdp-day_selected:hover {
-      background-color: #B565D8;
-      color: white;
+    .rdp { --rdp-cell-size: 40px; margin: 0; }
+    .rdp-caption_label { font-size: 1.1rem; font-weight: 700; color: #1f2937; }
+    .rdp-head_cell { color: #9ca3af; font-weight: 600; font-size: 0.75rem; text-transform: uppercase; }
+    .rdp-day_selected:not([disabled]), .rdp-day_selected:focus:not([disabled]), .rdp-day_selected:active:not([disabled]), .rdp-day_selected:hover:not([disabled]) { 
+      background-color: #8B5CF6; color: white; border-radius: 50%; 
     }
-    .rdp-button:hover:not([disabled]):not(.rdp-day_selected) {
-      background-color: #f3e8f9;
-    }
+    .rdp-day:hover:not(.rdp-day_selected) { background-color: #f3f4f6; border-radius: 50%; }
   `;
 
   return (
     <>
       <style>{css}</style>
-      <div className="fixed inset-0 bg-black/50 z-40 flex items-center justify-center backdrop-blur-sm" onClick={onClose}>
-        
-        {/* Main Container */}
-        <div className="bg-white rounded-[20px] w-[1000px] h-[650px] relative shadow-2xl flex overflow-hidden" onClick={e => e.stopPropagation()}>
-          
-          <button onClick={onClose} className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-full transition-colors z-50">
-            <X className="text-gray-500" />
-          </button>
-
-          {/* --- LEFT COLUMN: Calendar --- */}
-          <div className="w-[40%] bg-gray-50 p-8 flex flex-col items-center border-r border-gray-100 overflow-y-auto">
-            <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2 mb-2">
-              <CalendarIcon className="text-[#B565D8]" size={24} /> 
-              Select Days
-            </h2>
-            <p className="text-sm text-gray-500 mb-6">Click to add to your list</p>
-            
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
-              <DayPicker
-                mode="multiple"
-                selected={selectedDates}
-                onSelect={setSelectedDates}
-                showOutsideDays
-              />
-            </div>
+      <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={onClose}>
+        {/* Main Card Container - Increased roundedness for bubbly effect */}
+        <div 
+          className="bg-white rounded-[50px] w-[900px] h-[600px] shadow-2xl flex flex-col overflow-hidden" 
+          onClick={e => e.stopPropagation()}
+        >
+          {/* 1. Header (Fixed Height) */}
+          <div className="flex-none h-16 border-b border-gray-100 flex items-center justify-center bg-white relative">
+            <h2 className="text-lg font-bold text-gray-900">Schedule Setup</h2>
           </div>
 
-          {/* --- RIGHT COLUMN: Time List --- */}
-          <div className="w-[60%] flex flex-col h-full">
+          {/* 2. Content (Flex Grow) - Split View */}
+          <div className="flex-1 flex min-h-0">
             
-            {/* Header / Global Toggle */}
-            <div className="p-8 pb-4 border-b border-gray-100 bg-white z-10">
-              <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2 mb-4">
-                <Clock className="text-[#B565D8]" size={24} /> 
-                Set Times
-              </h2>
-
-              {/* Bulk Toggle */}
-              <div className="flex items-center gap-3 p-3 bg-purple-50 rounded-xl border border-purple-100 transition-all">
-                <input 
-                  type="checkbox" 
-                  id="applyAll" 
-                  checked={applyToAll}
-                  onChange={(e) => setApplyToAll(e.target.checked)}
-                  className="w-5 h-5 accent-[#B565D8] cursor-pointer"
+            {/* Left: Calendar */}
+            <div className="w-[40%] bg-gray-50/50 border-r border-gray-100 flex flex-col items-center justify-center p-6">
+              <div className="bg-white p-4 rounded-3xl shadow-sm border border-gray-200">
+                <DayPicker 
+                  mode="multiple"
+                  selected={selectedDates}
+                  onSelect={setSelectedDates}
+                  showOutsideDays
                 />
-                <div className="flex-1">
-                  <label htmlFor="applyAll" className="text-gray-800 font-semibold cursor-pointer block">
-                    Use same time for all days
-                  </label>
-                  {applyToAll && (
-                    <div className="flex gap-2 mt-2 items-center animate-in fade-in slide-in-from-top-1">
-                      <input 
-                        type="time" 
-                        value={globalTime.start}
-                        onChange={(e) => setGlobalTime({...globalTime, start: e.target.value})}
-                        className="p-1 px-2 border rounded bg-white text-sm"
-                      />
-                      <span className="text-gray-400">-</span>
-                      <input 
-                        type="time" 
-                        value={globalTime.end}
-                        onChange={(e) => setGlobalTime({...globalTime, end: e.target.value})}
-                        className="p-1 px-2 border rounded bg-white text-sm"
-                      />
-                    </div>
-                  )}
-                </div>
+              </div>
+              <div className="mt-6 flex items-center gap-2 text-sm font-medium text-[#8B5CF6] bg-[#F3E8F9] px-4 py-2 rounded-full">
+                <CalendarIcon size={16} />
+                <span>{selectedDates?.length || 0} dates selected</span>
               </div>
             </div>
 
-            {/* Scrollable List of Days */}
-            <div className="flex-1 overflow-y-auto p-8 pt-4 space-y-3 bg-white">
-              {(!selectedDates || selectedDates.length === 0) ? (
-                <div className="h-full flex flex-col items-center justify-center text-gray-400">
-                  <p>No days selected yet.</p>
-                </div>
-              ) : (
-                selectedDates.sort((a,b) => a.getTime() - b.getTime()).map((date) => {
-                  const dateKey = format(date, 'yyyy-MM-dd');
-                  const times = timeSlots[dateKey] || { start: '09:00', end: '17:00' }; // fallback
+            {/* Right: Settings & Actions */}
+            <div className="w-[60%] flex flex-col bg-white">
+              
+              {/* List Header */}
+              <div className="flex-none p-6 border-b border-gray-50">
+                <h3 className="text-lg font-semibold text-gray-900">Set Times</h3>
+                <p className="text-sm text-gray-500">Adjust availability for selected dates</p>
+              </div>
 
-                  return (
-                    <div key={dateKey} className="flex items-center justify-between p-3 border border-gray-200 rounded-xl hover:border-purple-200 transition-colors group">
-                      <div className="flex items-center gap-3">
-                        <div className="bg-gray-100 text-gray-700 font-bold px-3 py-1 rounded-lg text-sm">
-                          {format(date, 'MMM d')}
+              {/* Scrollable List */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                {(!selectedDates || selectedDates.length === 0) ? (
+                  <div className="h-full flex flex-col items-center justify-center text-gray-300 gap-3 opacity-60">
+                    <Clock size={40} />
+                    <p className="text-sm">Select dates on the left to begin</p>
+                  </div>
+                ) : (
+                  selectedDates.sort((a,b) => a.getTime() - b.getTime()).map(date => {
+                    const key = format(date, 'yyyy-MM-dd');
+                    const time = timeSlots[key] || { start: '09:00', end: '17:00' };
+                    return (
+                      <div key={key} className="flex items-center gap-4 group border-b border-gray-50 pb-4 last:border-0 last:pb-0">
+                        <div className="w-16">
+                          <div className="font-bold text-gray-900">{format(date, 'MMM d')}</div>
+                          <div className="text-xs text-gray-400">{format(date, 'EEE')}</div>
                         </div>
-                        <div className="text-gray-500 text-sm">{format(date, 'EEEE')}</div>
-                      </div>
-
-                      {!applyToAll ? (
-                        <div className="flex items-center gap-2">
-                          <input 
-                            type="time" 
-                            value={times.start}
-                            onChange={(e) => handleTimeChange(date, 'start', e.target.value)}
-                            className="p-2 border rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-[#B565D8] outline-none w-[110px]"
-                          />
+                        <div className="flex-1 flex items-center gap-2">
+                          <div className="relative flex-1">
+                            <input 
+                              type="time" 
+                              value={time.start}
+                              onChange={e => handleTimeChange(date, 'start', e.target.value)}
+                              className="w-full pl-8 pr-2 py-2 border border-gray-200 rounded-2xl text-sm focus:ring-2 focus:ring-[#8B5CF6] outline-none transition-all"
+                            />
+                            <Clock size={14} className="absolute left-2.5 top-3 text-gray-400 pointer-events-none" />
+                          </div>
                           <span className="text-gray-300">-</span>
-                          <input 
-                            type="time" 
-                            value={times.end}
-                            onChange={(e) => handleTimeChange(date, 'end', e.target.value)}
-                            className="p-2 border rounded-lg text-sm bg-gray-50 focus:bg-white focus:border-[#B565D8] outline-none w-[110px]"
-                          />
+                          <div className="relative flex-1">
+                            <input 
+                              type="time" 
+                              value={time.end}
+                              onChange={e => handleTimeChange(date, 'end', e.target.value)}
+                              className="w-full pl-8 pr-2 py-2 border border-gray-200 rounded-2xl text-sm focus:ring-2 focus:ring-[#8B5CF6] outline-none transition-all"
+                            />
+                            <Clock size={14} className="absolute left-2.5 top-3 text-gray-400 pointer-events-none" />
+                          </div>
                         </div>
-                      ) : (
-                         <span className="text-gray-400 text-sm italic">Using global time</span>
-                      )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
 
-                      <button 
-                        onClick={() => removeDate(date)}
-                        className="text-gray-300 hover:text-red-500 p-2 transition-colors opacity-0 group-hover:opacity-100"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
-                  );
-                })
-              )}
+              {/* Footer with Button - Centered and Sized to content */}
+              <div className="flex-none p-6 border-t border-gray-100 bg-white flex justify-center">
+                <button
+                  onClick={handleSubmit}
+                  disabled={isLoading || !selectedDates || selectedDates.length === 0}
+                  style={{ background: 'linear-gradient(90deg, #549EFF 0%, #8570FF 50%, #A06EFF 100%)' }}
+                  className="px-12 text-white py-3.5 rounded-full font-bold text-lg shadow-lg hover:opacity-90 active:scale-[0.99] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isLoading ? <Loader2 className="animate-spin" size={20} /> : "Continue"}
+                </button>
+              </div>
+
             </div>
-
-            {/* Footer */}
-            <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-between items-center">
-              <p className="text-sm text-gray-500">
-                {selectedDates?.length} days selected
-              </p>
-              <button 
-                onClick={handleSubmit}
-                disabled={isLoading || !selectedDates?.length}
-                className="bg-[#B565D8] text-white px-8 py-3 rounded-xl font-bold text-lg hover:shadow-lg active:scale-95 transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
-              >
-                {isLoading ? <Loader2 className="animate-spin" /> : "Save & Finish"}
-              </button>
-            </div>
-
           </div>
         </div>
       </div>
