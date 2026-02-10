@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { X, Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface CreateGroupPopupProps {
   isOpen: boolean;
@@ -9,8 +10,10 @@ interface CreateGroupPopupProps {
 }
 
 export function CreateGroupPopup({ isOpen, onClose, onSuccess }: CreateGroupPopupProps) {
+  const navigate = useNavigate();
   const [groupName, setGroupName] = useState('');
   const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -36,15 +39,16 @@ export function CreateGroupPopup({ isOpen, onClose, onSuccess }: CreateGroupPopu
 
       console.log("Group Created:", data);
       
-      alert(`Group "${groupName}" created!`);
-      
       // FIX: Passing password back to App.tsx
       if (onSuccess) {
         onSuccess(groupName, password);
       }
       
+      navigate('/schedule-setup', { state: { groupName, password, username } });
+      
       setGroupName('');
       setPassword('');
+      setUsername('');
       onClose();
 
     } catch (err: any) {
@@ -91,6 +95,15 @@ export function CreateGroupPopup({ isOpen, onClose, onSuccess }: CreateGroupPopu
                 placeholder="Set Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-[20px] py-[15px] border-2 border-gray-300 rounded-[10px] text-[18px] focus:outline-none focus:border-[#B565D8]"
+                required
+              />
+
+              <input
+                type="text"
+                placeholder="Your Name (Display Name)"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 className="w-full px-[20px] py-[15px] border-2 border-gray-300 rounded-[10px] text-[18px] focus:outline-none focus:border-[#B565D8]"
                 required
               />
