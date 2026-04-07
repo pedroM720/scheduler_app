@@ -28,7 +28,7 @@ export function CreateGroupPopup({ isOpen, onClose, onSuccess }: CreateGroupPopu
       const response = await fetch('http://127.0.0.1:8000/create-group', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ group_name: groupName, password: password }),
+        body: JSON.stringify({ group_name: groupName, password: password, username: username }),
       });
 
       const data = await response.json();

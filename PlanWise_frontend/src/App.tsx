@@ -8,6 +8,7 @@ import { CreateGroupPopup } from './components/CreateGroupPopup';
 import { MeetingDashboard } from './components/MeetingDashboard';
 import { ScheduleSetupPage } from './components/ScheduleSetupPage';
 
+
 function Home() {
   const [isNavOpen, setIsNavOpen] = useState(false);
   const [isSignInOpen, setIsSignInOpen] = useState(false);
@@ -70,6 +71,7 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/dashboard" element={<MeetingDashboard />} />
         <Route path="/schedule-setup" element={<ScheduleSetupPage />} />
+
       </Routes>
     </BrowserRouter>
   );

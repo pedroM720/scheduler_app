@@ -45,6 +45,7 @@ app.add_middleware(
 class GroupCreate(BaseModel):
     group_name: str
     password: str
+    username: str = "Host"
 
 class GroupJoin(BaseModel):
     group_name: str
@@ -91,10 +92,9 @@ def create_group(group_data: GroupCreate):
        
         new_group_id = group_response.data[0]["id"]
 
-        # 2. [NEW] Insert Creator as a User named "Host"
-        # This ensures the user exists when they try to save availability immediately after
+        # 2. Insert Creator as a user with their chosen display name
         supabase.table("users").insert({
-            "name": "Host",
+            "name": group_data.username,
             "group_id": new_group_id
         }).execute()
 
@@ -201,12 +201,17 @@ def add_availability(data: AvailabilityCreate):
     
     group_id = group_res.data[0]["id"]
     
-    # B. Find User ID
+    # B. Find User ID (or create user if they don't exist yet)
     user_res = supabase.table("users").select("id").eq("name", data.user_name).eq("group_id", group_id).execute()
     if not user_res.data:
-        raise HTTPException(status_code=404, detail="User not found in this group")
-    
-    user_id = user_res.data[0]["id"]
+        # Auto-create the user in this group
+        create_res = supabase.table("users").insert({
+            "name": data.user_name,
+            "group_id": group_id
+        }).execute()
+        user_id = create_res.data[0]["id"]
+    else:
+        user_id = user_res.data[0]["id"]
 
     # C. Prepare Data for Bulk Insert
     records = [
@@ -280,3 +285,32 @@ def get_group_overlap(group_name: str):
 FASTAPI  backend designed for user management, groups, share count, and database endpoints
 implements models for data validations an API endpoints
 """
+@app.get("/groups/{group_name}/members")
+def get_group_members(group_name: str):
+    # 1. Get Group ID
+    group_res = supabase.table("groups").select("id").eq("name", group_name).execute()
+    if not group_res.data:
+        raise HTTPException(status_code=404, detail="Group not found")
+    group_id = group_res.data[0]['id']
+
+    # 2. Get all users in the group
+    users_res = supabase.table("users").select("id, name").eq("group_id", group_id).execute()
+    users = users_res.data
+
+    # 3. For each user, check if they have availability submitted
+    if not users:
+        return {"members": []}
+        
+    avail_res = supabase.table("availability").select("user_id").in_("user_id", [u['id'] for u in users]).execute()
+    submitted_user_ids = {a['user_id'] for a in avail_res.data} if avail_res.data else set()
+
+    members = []
+    for u in users:
+        members.append({
+            "id": u['id'],
+            "name": u['name'],
+            "avatar": "".join([n[0] for n in u['name'].split()[:2]]).upper() if u['name'] else "??",
+            "hasSubmitted": u['id'] in submitted_user_ids
+        })
+
+    return {"members": members}
