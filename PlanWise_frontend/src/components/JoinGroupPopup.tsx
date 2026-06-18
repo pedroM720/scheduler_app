@@ -1,5 +1,6 @@
 import { X, Loader2 } from 'lucide-react';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 // FIX 1: Update interface to include password (matching App.tsx expectation)
 interface JoinGroupPopupProps {
@@ -9,6 +10,7 @@ interface JoinGroupPopupProps {
 }
 
 export function JoinGroupPopup({ isOpen, onClose, onSuccess }: JoinGroupPopupProps) {
+  const navigate = useNavigate();
   const [groupName, setGroupName] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState(''); 
@@ -49,6 +51,10 @@ export function JoinGroupPopup({ isOpen, onClose, onSuccess }: JoinGroupPopupPro
         onSuccess(groupName, password, username);
       }
       
+      navigate('/dashboard', { state: { groupName, password, username } });
+      setGroupName('');
+      setPassword('');
+      setUsername('');
       onClose();
 
     } catch (err: any) {
@@ -65,19 +71,19 @@ export function JoinGroupPopup({ isOpen, onClose, onSuccess }: JoinGroupPopupPro
         onClick={onClose}
       >
         <div 
-          className="bg-white rounded-[20px] w-[600px] h-auto relative shadow-xl py-[50px]"
+          className="bg-white rounded-[16px] border-[2.5px] border-solid border-[#13113C] w-[600px] h-auto relative shadow-[8px_8px_0px_0px_#13113C] py-[50px] px-[40px]"
           onClick={(e) => e.stopPropagation()}
         >
           <button
             onClick={onClose}
-            className="absolute top-[20px] right-[20px] size-[40px] flex items-center justify-center cursor-pointer transition-all duration-200 hover:opacity-60"
+            className="absolute top-[20px] right-[20px] size-[40px] flex items-center justify-center cursor-pointer transition-all duration-200 hover:opacity-60 border-[1.5px] border-[#13113C] rounded-[10px] hover:bg-gray-100"
           >
-            <X className="size-[30px] text-gray-600" strokeWidth={2} />
+            <X className="size-[24px] text-[#13113C]" strokeWidth={2.5} />
           </button>
 
-          <div className="flex flex-col items-center justify-center h-full px-[40px] gap-[30px]">
+          <div className="flex flex-col items-center justify-center h-full gap-[30px]">
             <div className="text-center">
-              <p className="font-['Inter:Regular',sans-serif] text-[32px] text-gray-800">
+              <p className="font-display font-bold text-[32px] text-[#13113C]">
                 Join Group
               </p>
             </div>
@@ -89,7 +95,7 @@ export function JoinGroupPopup({ isOpen, onClose, onSuccess }: JoinGroupPopupPro
                 placeholder="Group Name"
                 value={groupName}
                 onChange={(e) => setGroupName(e.target.value)}
-                className="w-full px-[20px] py-[15px] border-2 border-gray-300 rounded-[10px] text-[18px] focus:outline-none focus:border-[#B565D8]"
+                className="w-full px-[20px] py-[15px] border-[2px] border-solid border-[#13113C] rounded-[12px] text-[18px] focus:outline-none focus:border-[#8570FF] focus:shadow-[2px_2px_0px_0px_#13113C] transition-all font-sans font-medium text-gray-800 placeholder-gray-400"
                 required
               />
 
@@ -98,7 +104,7 @@ export function JoinGroupPopup({ isOpen, onClose, onSuccess }: JoinGroupPopupPro
                 placeholder="Group Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-[20px] py-[15px] border-2 border-gray-300 rounded-[10px] text-[18px] focus:outline-none focus:border-[#B565D8]"
+                className="w-full px-[20px] py-[15px] border-[2px] border-solid border-[#13113C] rounded-[12px] text-[18px] focus:outline-none focus:border-[#8570FF] focus:shadow-[2px_2px_0px_0px_#13113C] transition-all font-sans font-medium text-gray-800 placeholder-gray-400"
                 required
               />
 
@@ -107,7 +113,7 @@ export function JoinGroupPopup({ isOpen, onClose, onSuccess }: JoinGroupPopupPro
                 placeholder="Your Name (Display Name)"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full px-[20px] py-[15px] border-2 border-gray-300 rounded-[10px] text-[18px] focus:outline-none focus:border-[#B565D8]"
+                className="w-full px-[20px] py-[15px] border-[2px] border-solid border-[#13113C] rounded-[12px] text-[18px] focus:outline-none focus:border-[#8570FF] focus:shadow-[2px_2px_0px_0px_#13113C] transition-all font-sans font-medium text-gray-800 placeholder-gray-400"
                 required
               />
 
@@ -120,7 +126,7 @@ export function JoinGroupPopup({ isOpen, onClose, onSuccess }: JoinGroupPopupPro
               <button
                 type="submit"
                 disabled={isLoading}
-                className="bg-[#B565D8] text-white px-[40px] py-[15px] rounded-[10px] text-[20px] cursor-pointer transition-all duration-200 hover:shadow-[3px_5px_6px_0px_rgba(0,0,0,0.3)] active:translate-y-[2px] flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                className="bg-[#8570FF] border-[2.5px] border-solid border-[#13113C] text-white font-bold px-[40px] py-[15px] rounded-[14px] text-[20px] shadow-[4px_4px_0px_0px_#13113C] cursor-pointer transition-all duration-200 hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_#13113C] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 {isLoading ? <Loader2 className="animate-spin" /> : "Join Group"}
               </button>

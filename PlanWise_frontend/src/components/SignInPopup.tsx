@@ -17,20 +17,20 @@ export function SignInPopup({ isOpen, onClose }: SignInPopupProps) {
       >
         {/* Popup */}
         <div 
-          className="bg-white rounded-[20px] w-[600px] h-[400px] relative shadow-xl"
+          className="bg-white rounded-[16px] border-[2.5px] border-solid border-[#13113C] w-[600px] h-[400px] relative shadow-[8px_8px_0px_0px_#13113C] py-[50px] px-[40px]"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Close Button */}
           <button
             onClick={onClose}
-            className="absolute top-[20px] right-[20px] size-[40px] flex items-center justify-center cursor-pointer transition-all duration-200 hover:opacity-60"
+            className="absolute top-[20px] right-[20px] size-[40px] flex items-center justify-center cursor-pointer transition-all duration-200 hover:opacity-60 border-[1.5px] border-[#13113C] rounded-[10px] hover:bg-gray-100"
           >
-            <X className="size-[30px] text-gray-600" strokeWidth={2} />
+            <X className="size-[24px] text-[#13113C]" strokeWidth={2.5} />
           </button>
 
           {/* Popup Content Placeholder */}
           <div className="flex items-center justify-center h-full">
-            <p className="font-['Inter:Regular',sans-serif] text-[24px] text-gray-400">
+            <p className="font-display font-bold text-[32px] text-[#13113C]">
               Sign In Popup
             </p>
           </div>

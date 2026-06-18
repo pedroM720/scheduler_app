@@ -213,7 +213,10 @@ def add_availability(data: AvailabilityCreate):
     else:
         user_id = user_res.data[0]["id"]
 
-    # C. Prepare Data for Bulk Insert
+    # C. Delete old availability first to overwrite
+    supabase.table("availability").delete().eq("user_id", user_id).execute()
+
+    # D. Prepare Data for Bulk Insert
     records = [
         {
             "user_id": user_id,
@@ -223,8 +226,9 @@ def add_availability(data: AvailabilityCreate):
         for slot in data.slots
     ]
 
-    # D. Insert
-    insert_res = supabase.table("availability").insert(records).execute()
+    # E. Insert
+    if records:
+        supabase.table("availability").insert(records).execute()
     return {"message": f"Added {len(records)} slots for {data.user_name}"}
 
 # --- 3. Endpoint: Get Group Overlap ---
@@ -236,8 +240,8 @@ def get_group_overlap(group_name: str):
         raise HTTPException(status_code=404, detail="Group not found")
     group_id = group_res.data[0]['id']
 
-    # B. Get all users in the group
-    users_res = supabase.table("users").select("id").eq("group_id", group_id).execute()
+    # B. Get all users in the group, excluding the system calendar range user
+    users_res = supabase.table("users").select("id").eq("group_id", group_id).neq("name", "_group_dates").execute()
     if not users_res.data:
         return {"overlap": []} # No users, no overlap
     
@@ -293,8 +297,8 @@ def get_group_members(group_name: str):
         raise HTTPException(status_code=404, detail="Group not found")
     group_id = group_res.data[0]['id']
 
-    # 2. Get all users in the group
-    users_res = supabase.table("users").select("id, name").eq("group_id", group_id).execute()
+    # 2. Get all users in the group, excluding the system calendar range user
+    users_res = supabase.table("users").select("id, name").eq("group_id", group_id).neq("name", "_group_dates").execute()
     users = users_res.data
 
     # 3. For each user, check if they have availability submitted
@@ -314,3 +318,33 @@ def get_group_members(group_name: str):
         })
 
     return {"members": members}
+
+
+@app.get("/groups/{group_name}/availability")
+def get_group_availability(group_name: str):
+    # A. Get Group ID
+    group_res = supabase.table("groups").select("id").eq("name", group_name).execute()
+    if not group_res.data:
+        raise HTTPException(status_code=404, detail="Group not found")
+    group_id = group_res.data[0]['id']
+
+    # B. Get all users in the group
+    users_res = supabase.table("users").select("id, name").eq("group_id", group_id).execute()
+    if not users_res.data:
+        return {"availability": []}
+    
+    # C. Get availability for all users
+    user_ids = [u['id'] for u in users_res.data]
+    user_map = {u['id']: u['name'] for u in users_res.data}
+    slots_res = supabase.table("availability").select("*").in_("user_id", user_ids).execute()
+    
+    # D. Format output
+    result = []
+    for slot in slots_res.data:
+        result.append({
+            "user_id": slot["user_id"],
+            "user_name": user_map.get(slot["user_id"], "Unknown"),
+            "start_time": slot["start_time"],
+            "end_time": slot["end_time"]
+        })
+    return {"availability": result}
